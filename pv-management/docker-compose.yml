@@ -1,0 +1,106 @@
+version: '3.7'
+
+#### USE ONLY WITH PRE-MADE PERSISTENT VOLUMES AND CONFIGS ####
+
+services:
+  # Several steps have to be done first
+  influxdb:
+    image: influxdb:1.8
+    container_name: influxdb
+    restart: unless-stopped
+    ports:
+      - '8086:8086'
+      # - '8088:8088'
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - '${PERSISTENCE_PATH}/influxdb:/var/lib/influxdb'
+      - '${PERSISTENCE_PATH}/influxdb/influxdb.conf:/etc/influxdb/influxdb.conf:ro'
+      - '/etc/localtime:/etc/localtime:ro'
+    networks:
+      - monitoring
+    command:
+      - "-config=/etc/influxdb/influxdb.conf"
+
+  # chown -R 472:472 /mnt/docker-persistence/$container_name
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    depends_on:
+      - influxdb
+    ports:
+      - '3000:3000'
+    environment:
+      - 'GF_SECURITY_ALLOW_EMBEDDING=true'
+      - 'GF_AUTH_ANONYMOUS_ENABLED=true'
+    volumes:
+      - '${PERSISTENCE_PATH}/grafana:/var/lib/grafana'
+      - '/etc/localtime:/etc/localtime:ro'
+    networks:
+    - monitoring
+
+  # Configuration has to be created first
+  mqtt:
+    image: eclipse-mosquitto
+    container_name: mqtt
+    restart: unless-stopped
+    ports:
+      - '1883:1883'
+      - '9001:9001'
+    volumes:
+      - '${PERSISTENCE_PATH}/mqtt/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro'
+      - '${PERSISTENCE_PATH}/mqtt/data:/mosquitto/data'
+      - '${PERSISTENCE_PATH}/mqtt/log:/mosquitto/log'
+      - '/etc/localtime:/etc/localtime:ro'
+    networks:
+      - iot
+
+  # chown -R 1000:1000 ${PERSISTENCE_PATH}/nodered
+  nodered:
+    image: 'nodered/node-red:latest'
+    container_name: nodered
+    restart: unless-stopped
+    depends_on:
+      - mqtt
+      - influxdb
+    ports:
+      - '1880:1880'
+    environment:
+      - TZ=Europe/Madrid
+    volumes:
+      - '${PERSISTENCE_PATH}/nodered:/data'
+      - '/etc/localtime:/etc/localtime:ro'
+    networks:
+      - iot
+      - monitoring
+  
+  venus-server:
+    image: 'victronenergy/venus-docker-server:latest'
+    container_name: venus-server
+    restart: unless-stopped
+    ports:
+      - '8088:8088'
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - '${PERSISTENCE_PATH}/venus:/config'
+      - '/etc/localtime:/etc/localtime:ro'
+    networks:
+      - venus
+      - iot
+      - monitoring
+
+  venus-upnp:
+    image: "victronenergy/venus-docker-upnp:latest"
+    container_name: venus-upnp
+    restart: unless-stopped
+    network_mode: host
+    
+networks:
+  iot:
+    name: iot
+  monitoring:
+    name: monitoring
+  venus:
+    name: venus
