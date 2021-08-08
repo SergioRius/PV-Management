@@ -22,7 +22,22 @@ services:
     command:
       - "-config=/etc/influxdb/influxdb.conf"
 
-  # chown -R 472:472 /mnt/docker-persistence/$container_name
+  # Configuration has to be created first
+  mqtt:
+    image: eclipse-mosquitto
+    container_name: mqtt
+    restart: unless-stopped
+    ports:
+      - '1883:1883'
+      - '9001:9001'
+    volumes:
+      - '${PERSISTENCE_PATH}/mqtt/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro'
+      - '${PERSISTENCE_PATH}/mqtt/data:/mosquitto/data'
+      - '${PERSISTENCE_PATH}/mqtt/log:/mosquitto/log'
+      - '/etc/localtime:/etc/localtime:ro'
+    networks:
+      - iot
+
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -40,23 +55,6 @@ services:
     networks:
     - monitoring
 
-  # Configuration has to be created first
-  mqtt:
-    image: eclipse-mosquitto
-    container_name: mqtt
-    restart: unless-stopped
-    ports:
-      - '1883:1883'
-      - '9001:9001'
-    volumes:
-      - '${PERSISTENCE_PATH}/mqtt/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro'
-      - '${PERSISTENCE_PATH}/mqtt/data:/mosquitto/data'
-      - '${PERSISTENCE_PATH}/mqtt/log:/mosquitto/log'
-      - '/etc/localtime:/etc/localtime:ro'
-    networks:
-      - iot
-
-  # chown -R 1000:1000 ${PERSISTENCE_PATH}/nodered
   nodered:
     image: 'nodered/node-red:latest'
     container_name: nodered
@@ -67,13 +65,49 @@ services:
     ports:
       - '1880:1880'
     environment:
-      - TZ=Europe/Madrid
+      - TZ=${TZ}
     volumes:
       - '${PERSISTENCE_PATH}/nodered:/data'
-      - '/etc/localtime:/etc/localtime:ro'
+      - /sys:/host/sys:ro
+      - /proc:/host/proc:ro
+      - /etc:/host/etc:ro
+      - '/etc/localtime:/etc/localtime:ro'      
     networks:
       - iot
       - monitoring
+
+  homeassistant:
+    container_name: homeassistant
+    restart: unless-stopped
+    image: homeassistant/home-assistant
+    privileged: true
+    # You can run it on host or contained. Adjust commanting and uncommenting block below.
+    network_mode: host
+    # ports:
+    #   - '8123:8123'
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+    # devices:
+    #   - /dev/ttyUSB0:/dev/ttyUSB0
+    #   - /dev/ttyUSB1:/dev/ttyUSB1
+    #   - /dev/ttyACM0:/dev/ttyACM0
+    volumes:
+      - '${PERSISTENCE_PATH}/homeassistant:/config'
+      - '${PERSISTENCE_PATH}/shared:/shared'
+      - /etc/localtime:/etc/localtime:ro
+      # If you need to pass a device, uncomment and edit below
+      # - /dev/serial/by-id/:/dev/serial/by-id/
+    # networks:
+    #   - iot
+    #   - monitoring
+
+  venus-upnp:
+    image: "victronenergy/venus-docker-upnp:latest"
+    container_name: venus-upnp
+    restart: unless-stopped
+    network_mode: host
   
   venus-server:
     image: 'victronenergy/venus-docker-server:latest'
@@ -91,11 +125,26 @@ services:
       - iot
       - monitoring
 
-  venus-upnp:
-    image: "victronenergy/venus-docker-upnp:latest"
-    container_name: venus-upnp
+  telegraf:
+    image: telegraf:latest
+    container_name: telegraf
     restart: unless-stopped
-    network_mode: host
+    depends_on:
+      - influxdb
+    ports:
+      - '8087:8087'
+      - '8125:8125/udp'
+      - '8092:8092/udp'
+      - '8094:8094/tcp'
+    volumes:
+      - '${PERSISTENCE_PATH}/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro'
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /sys:/host/sys:ro
+      - /proc:/host/proc:ro
+      - /etc:/host/etc:ro
+    networks:
+      - monitoring
     
 networks:
   iot:

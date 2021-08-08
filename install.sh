@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Linux recipes install script
+# PV management install script
 # Version: MASTER branch
 # Author:  Sergio Rius
 #
@@ -54,9 +54,9 @@ fi
 
 echo; echo "Checking Docker-Compose installation"
 if docker-compose -v >/dev/null 2>&1; then
-    echo "Docker-Compose already installed in this system."
+  echo "Docker-Compose already installed in this system."
 else
-  echo "Not found. Installing Docker-Compose"
+  echo "Not found. Installing..."
   case $(uname -m) in
     x86_64)
       platform="amd64"
@@ -67,16 +67,26 @@ else
     arm)
       platform="armhf"
       ;;
+    armv7l)
+      platform="armv7l"
+      ;;
     *)
-      echo "Platform not supported"
-      return
+      platform=""
       ;;
   esac
 
-  curl -L "https://github.com/linuxserver/docker-docker-compose/releases/latest/download/docker-compose-$(platform)" -o /usr/local/bin/docker-compose
-  chmod +x /usr/local/bin/docker-compose
-
-  echo; read -p " - Press any key to continue..."
+#   if [platform == ""]; then 
+#     echo "ERROR! Platform not supported."
+#     echo "You will not be able to install the stack."
+#   else if [platform == "armv7l"]; then
+#     # https://github.com/docker/compose/issues/6831
+#     # https://www.berthon.eu/2019/revisiting-getting-docker-compose-on-raspberry-pi-arm-the-easy-way/
+#     apt install docker-compose
+#   else
+#     curl -L "https://github.com/linuxserver/docker-docker-compose/releases/latest/download/docker-compose-$(platform)" -o /usr/local/bin/docker-compose
+#     chmod +x /usr/local/bin/docker-compose
+#   fi
+#   echo; read -p " - Press any key to continue..."
 fi
 
 echo;
@@ -140,6 +150,10 @@ read -p "Do you want to continue? (y/n) " yn
 case $yn in
   [Yy]* )
     echo "Installing management stack..."
+    [ ! -d "$persistence/shared" ] && mkdir -p "$persistence/shared"
+    chown -R 1000:1000 "$persistence/shared"
+    [ ! -d "$persistence/homeassistant" ] && mkdir -p "$persistence/homeassistant"
+    chown -R 1000:1000 "$persistence/homeassistant"
     [ ! -d "$persistence/mqtt/config" ] && mkdir -p "$persistence/mqtt/config"
     chown -R 1883:1883 "$persistence/mqtt"
     [ ! -d "$persistence/grafana" ] && mkdir -p "$persistence/grafana"
@@ -148,21 +162,29 @@ case $yn in
     chown -R 1000:1000 "$persistence/nodered"
 
     if [ ! -f "$persistence/mqtt/config/mosquitto.conf" ]; then
+      echo; echo "Creating mqtt initial config..."
       cp mqtt/mosquitto.conf "$persistence/mqtt/config/mosquitto.conf"
-      chown -R 1883:1883 "$persistence/mqtt"
     fi
+    chown -R 1883:1883 "$persistence/mqtt"
 
     # Having so much version compatibilty problems upon creating a new config
     # I opted for just copying a working one.
-    echo; echo "Creating influxdb initial config if it doesn't exist"
     [ ! -d "$persistence/influxdb" ] && mkdir -p "$persistence/influxdb"
     if [ ! -f "$persistence/influxdb/influxdb.conf" ]; then
+      echo; echo "Creating influxdb initial config..."
       cp influxdb/influxdb.conf "$persistence/influxdb/influxdb.conf"
     #   docker run --rm \
     #     -e INFLUXDB_REPORTING_DISABLED=true \
-    #     influxdb:latest \
+    #     influxdb:1.8 \
     #     influxd config > "$persistence/influxdb/influxdb.conf"
     fi
+
+    [ ! -d "$persistence/telegraf" ] && mkdir -p "$persistence/telegraf"
+    if [ ! -f "$persistence/telegraf/telegraf.conf" ]; then
+      echo; echo "Creating telegraf initial config..."
+      cp telegraf/telegraf.conf "$persistence/telegraf/telegraf.conf"
+    fi
+    chown -R 1000:1000 "$persistence/telegraf"
 
     echo; echo "Setting up env variables"
     cd pv-management
