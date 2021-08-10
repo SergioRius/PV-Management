@@ -75,18 +75,18 @@ else
       ;;
   esac
 
-#   if [platform == ""]; then 
-#     echo "ERROR! Platform not supported."
-#     echo "You will not be able to install the stack."
-#   else if [platform == "armv7l"]; then
-#     # https://github.com/docker/compose/issues/6831
-#     # https://www.berthon.eu/2019/revisiting-getting-docker-compose-on-raspberry-pi-arm-the-easy-way/
-#     apt install docker-compose
-#   else
-#     curl -L "https://github.com/linuxserver/docker-docker-compose/releases/latest/download/docker-compose-$(platform)" -o /usr/local/bin/docker-compose
-#     chmod +x /usr/local/bin/docker-compose
-#   fi
-#   echo; read -p " - Press any key to continue..."
+  if [platform == ""]; then 
+    echo "ERROR! Platform not supported."
+    echo "You will not be able to install the stack."
+  else if [platform == "armv7l"]; then
+    # https://github.com/docker/compose/issues/6831
+    # https://www.berthon.eu/2019/revisiting-getting-docker-compose-on-raspberry-pi-arm-the-easy-way/
+    apt install -q -y docker-compose
+  else
+    curl -L "https://github.com/linuxserver/docker-docker-compose/releases/latest/download/docker-compose-$(platform)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
+  fi
+  echo; read -p " - Press any key to continue..."
 fi
 
 echo;
@@ -108,7 +108,7 @@ EOT
     iptables -I INPUT -p tcp -m tcp --dport 2376 -j ACCEPT -m comment --comment "DOCKER_API_INSECURE"
 
     #tdnf install iptables-persistent
-    apt install --qqy iptables-persistent
+    apt install -q -y iptables-persistent
 
     [[ -d /etc/systemd/scripts ]] || mkdir -p /etc/systemd/scripts
 
