@@ -58,6 +58,14 @@ After the installation you'll find the following tools (remember to replace `0.0
 
 This setup includes the Victron GX/Venus connector containers to allow directly dumping Victron data into InfluxDb. You'll have to configure it at the adress above to start logging.
 
+Notes:
+  For creating a new InfluxDb database you have two options:
+  - Redirecting the data through the included telegraf container as it was an InfluxDb (port 8087). The container will create the database automatically.
+  - Executing the following command on the device's shell
+  ```sh
+  docker exec -it influxdb influx -execute 'create database <new database>'
+  ```
+
 ## Contribution
 
 Feel free to contribute and send your flows and dashboards for them to be available to the other users. Just remember that they need to be related to the topic and that they need to be previously processed for them to be automatically installed.
