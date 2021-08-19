@@ -48,8 +48,6 @@ else
 
   systemctl daemon-reload
   systemctl restart docker.service
-
-  read -p " - Press any key to continue..."
 fi
 
 echo; echo "Checking Docker-Compose installation"
@@ -71,14 +69,13 @@ else
       platform="armv7l"
       ;;
     *)
-      platform=""
+      echo "ERROR! Platform not supported."
+      echo "You will not be able to install the stack."
+      exit 1
       ;;
   esac
 
-  if [platform == ""]; then 
-    echo "ERROR! Platform not supported."
-    echo "You will not be able to install the stack."
-  else if [platform == "armv7l"]; then
+  if [platform == "armv7l"]; then
     # https://github.com/docker/compose/issues/6831
     # https://www.berthon.eu/2019/revisiting-getting-docker-compose-on-raspberry-pi-arm-the-easy-way/
     apt install -q -y docker-compose
@@ -86,7 +83,6 @@ else
     curl -L "https://github.com/linuxserver/docker-docker-compose/releases/latest/download/docker-compose-$(platform)" -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
   fi
-  echo; read -p " - Press any key to continue..."
 fi
 
 echo;
@@ -113,10 +109,7 @@ EOT
     [[ -d /etc/systemd/scripts ]] || mkdir -p /etc/systemd/scripts
 
     iptables-save >/etc/systemd/scripts/ip4save
-
-    read -p " - Press any key to continue..."
-  break;;
-  * ) echo "OK!";;
+    ;;
 esac
 
 echo; echo "Setting docker persistence folder if not exists"
@@ -138,11 +131,7 @@ case $yn in
       -v $persistence/portainer:/data \
       -v /etc/localtime:/etc/localtime:ro \
       -d portainer/portainer
-    read -p " - Press any key to continue..."
-  ;;
-  * )
-    echo "OK!"
-  ;;
+    ;;
 esac
 
 echo; echo "I will now create the container stack."
@@ -188,16 +177,13 @@ case $yn in
 
     echo; echo "Setting up env variables"
     cd pv-management
-    cat <<EOF > .env
+    cat <<EOT > .env
 # Docker stack environment variables
 PERSISTENCE_PATH=$persistence
 TZ=$TZ
-EOF
+EOT
     docker-compose up -d
-  ;;
-  * )
-    echo "OK!"
-  ;;
+    ;;
 esac
+
 echo; echo "All jobs done!"
-read -p " - Press any key to continue..."

@@ -15,20 +15,18 @@ echo; echo "This will remove the PV management stack."
 read -p "Do you want to continue? (y/n) " yn
 case $yn in
   [Yy]* )
-    echo "Uninstalling management stack..."
+    echo; echo "Uninstalling management stack..."
     cd pv-management
     docker-compose down
     cd ..
-  ;;
-  * )
-    echo "Stack removed!"
-  ;;
+    ;;
 esac
 
 echo; echo "Do you want to also remove the persistence location?"
 read -p "WARNING! This will wipe all your data (y/n) " yn
 case $yn in
   [Yy]* )
+    echo; echo "Removing data..."
     rm -r /mnt/docker-persistence/venus
     rm -r /mnt/docker-persistence/influxdb
     rm -r /mnt/docker-persistence/telegraf
@@ -37,10 +35,7 @@ case $yn in
     rm -r /mnt/docker-persistence/nodered
     rm -r /mnt/docker-persistence/homeassistant
     rm -r /mnt/docker-persistence/shared
-  ;;
-  * )
-    echo "Persistence removed!"
-  ;;
+    ;;
 esac
 
 echo; echo "All done."
