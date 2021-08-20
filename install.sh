@@ -75,7 +75,7 @@ else
       ;;
   esac
 
-  if [platform == "armv7l"]; then
+  if [$platform == "armv7l"]; then
     # https://github.com/docker/compose/issues/6831
     # https://www.berthon.eu/2019/revisiting-getting-docker-compose-on-raspberry-pi-arm-the-easy-way/
     apt install -q -y docker-compose
