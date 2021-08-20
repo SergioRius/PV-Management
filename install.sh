@@ -75,12 +75,12 @@ else
       ;;
   esac
 
-  if [$platform == "armv7l"]; then
+  if [[ $platform == "armv7l" ]]; then
     # https://github.com/docker/compose/issues/6831
     # https://www.berthon.eu/2019/revisiting-getting-docker-compose-on-raspberry-pi-arm-the-easy-way/
     apt install -q -y docker-compose
   else
-    curl -L "https://github.com/linuxserver/docker-docker-compose/releases/latest/download/docker-compose-$(platform)" -o /usr/local/bin/docker-compose
+    curl -L "https://github.com/linuxserver/docker-docker-compose/releases/latest/download/docker-compose-$platform" -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
   fi
 fi
